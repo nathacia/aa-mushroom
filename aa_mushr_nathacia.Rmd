@@ -1,0 +1,102 @@
+---
+title: "Association Rule Mining Analysis on Mushroom dataset"
+author: "Nathacia Nathacia"
+date: '2022-10-22'
+output:
+  html_document:
+    df_print: paged
+---
+
+#### Loading necessary packages
+```{r, results='hide'}
+library(arules)
+library(arulesViz)
+```
+I began the script by selecting the necessary packages for the analyses which are arules and arulesViz.
+
+
+## Association Rule Mining
+#### Mushroom dataset
+
+### Importing dataset
+```{r, results='hide'}
+data(package='arules')
+data("Mushroom")
+```
+
+
+### Investigating data
+```{r}
+inspect(Mushroom)
+head(Mushroom)
+inspect(head(Mushroom))
+inspect(head(Mushroom,2))
+inspect(tail(Mushroom))
+inspect(tail(Mushroom,3))
+
+size(Mushroom)
+
+LIST(head(Mushroom,1))
+LIST(tail(Mushroom,1))
+```
+I started by using the class() function in order to ensure that the data class was transaction. After this, I used View() in order to get a better understanding of the data. After this, I used the inspect() function to take a closer look at the transaction dataset, and used head() and tail() as well to thoroughly investigate the data. I then used the size() function to see the length of each transaction, almost all of which are 22 or 23 as the dataset is essentially records and details about various mushroom types as transaction data. All the attributes or variables provide value in each transaction since the dataset is not sparse, which means there would be higher support for this kind of transaction data.
+
+
+### Frequent items (review & visualization)
+```{r}
+itemFrequencyPlot(Mushroom)
+itemFrequencyPlot(Mushroom, topN=10, type='absolute')
+
+frequent_variable = eclat(Mushroom,
+                          parameter = list(support=.5, maxlen=10))
+frequent_variable
+inspect(frequent_variable)
+
+freq_variable_sorted <- sort(frequent_variable, by = 'support')
+freq_variable_sorted
+inspect(freq_variable_sorted)
+inspect(head(freq_variable_sorted, 5))
+```
+I continued by using the itemFrequencyPlot() function as I wanted to understand the variables in the dataset. From the plotted graph, I understood that not all mushrooms are classified and defined in all the variables. For instance, some “transactions” (mushrooms) have StalkRoot = .., whereas some do not. The graph in general was hard to understand or see since there are a lot of variables, but it did offer me some insight on the transaction data present. Using the code ‘itemFrequencyPlot(Mushroom, topN=10, type='absolute')’ to make the plot more meaningful and comprehensible.
+I then proceeded to use the eclat() function using the metrics of .5 support and 10 maxlen, assigning it to a new variable called frequent_variable. This gave me an absolute minimum support count of 4062 transactions and the frequent_variable return is 153 itemsets. I used inspect() to take a look at the 153 itemsets that are the most frequent. Since I want to sort the itemsets and keep only the top 5, I use the sort() function and assign it to a new variable known as freq_variable_sorted. I then inspect it using inspect(head(,5)) in order to take a look at the top 5. The sort() function arranged the frequent itemsets in descending order based on support. The support of {VeilType=partial} is 1.00, meaning that all of the mushrooms have partial veil types.
+
+
+### Generate rules
+```{r}
+mushrules <- apriori(Mushroom,
+                     parameter = list(support=.85, conf=.7))
+mushrules
+inspect(mushrules)
+mushrules_conf <- sort(mushrules, by='confidence', decreasing = T)
+inspect(head(mushrules_conf))
+mushrules_lift <- sort(mushrules, by='lift', decreasing = T)
+inspect(head(mushrules_lift))
+mushrules_lift_subset <- subset(mushrules, lift>1)
+inspect(mushrules_lift_subset)
+
+plot(mushrules_lift_subset)
+plot(mushrules_lift_subset, interactive = T)
+plot(mushrules_lift_subset,method='matrix')
+plot(mushrules_lift_subset,method='graph')
+```
+I then began to generate rules, first by creating a new variable called mushrules and used the function apriori with the following metrics: support = 0.85, conf = 0.7. The results gave me 32 rules, which I then inspected using the inspect() function. Below are the first 13 rules. Some rules have an empty left-hand side with a lift of 1.00, meaning that the left-hand side (lhs) and the right-hand side (rhs) are independent of one another.
+Following this step, I would like to sort the rules in order to show the strongest rules. I used the code ‘mushrules_conf <- sort(mushrules, by='confidence', decreasing = T)’ in order to assign the sorted rules by confidence to a new variable. I then inspected the mushrules_conf variable using the head() and inspect() functions, and these are the results. The confidence of all 5 rules below are 1, meaning that 100% of the time the left-hand side and right-hand side occur consequently in transactions. Since we already know that all the mushrooms have partial veil types, it is not surprising to see that all mushrooms with one ring number or free gill attached or white veil color all also have partial veil types. The lift of the 5th rule is also slightly larger than 1.00. I then used the sort function again and assigned it to a new variable called mushrules_lift to sort the rules in descending order by their lift. We can see that the lift for the first 6 rules are greater than 1.00, meaning that the left-hand side and the right-hand side in the association rule are positively related. Right-hand side and the left-hand side are more likely to happen together than not. I then created a subset based on rules with larger than 1.00 lift, and the result showed as having 14 rules with more than 1.00 in lift value.
+I then used the plot() function on the new subset variable (mushrules_life_subset) and made a regular and interactive scatter plot graph. I also used the matrix method to see the matrix for 14 rules. I also used the graph method and from the plotted graph, we can observe that if mushrooms have white veil color or one ring number, it is very likely that they have a partial veil type.
+
+
+### Restrict LHS & RHS
+Now we move on to restricting the left and right hand side. Mushrules initially has 32 rules and now I am restricting it based on lhs=’VeilType=partial’. The result comes up as 3 rules, and inspecting it shows us these results. The left-hand side is restricted to VeilType=partial.
+```{r}
+mushrules <- apriori(Mushroom,
+                     parameter = list(support=.85, conf=.7, minlen=2),
+                     appearance = list(default='rhs', lhs='VeilType=partial'))
+mushrules
+inspect(mushrules)
+mushrules <- apriori(Mushroom,
+                     parameter = list(support=.85, conf=.7, minlen=2),
+                     appearance = list(default='lhs', rhs='VeilType=partial'))
+mushrules
+inspect(mushrules)
+```
+I attempted to restrict it again using lhs as default and rhs as VeilType=partial. 7 rules are generated based on the metrics and the results are as follows. The confidence and lift of these rules are all 1, which is expected as we have already established and repeatedly observed that all mushrooms have a partial veil type.
+
